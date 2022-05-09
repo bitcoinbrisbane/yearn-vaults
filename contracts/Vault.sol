@@ -133,6 +133,7 @@ contract Vault {
     }
 
     function transfer(address receiver, uint256 amount) external {
+        
     }
 
     function transferFrom(address sender, address receiver, uint256 amount) external {
@@ -219,7 +220,7 @@ contract Vault {
 
     event Deposit();
     event Withdrawal();
-    event Sweep();
+    event Sweep(address );
     event LockedProfitDegradationUpdated();
     event StrategyAdded();
 }
