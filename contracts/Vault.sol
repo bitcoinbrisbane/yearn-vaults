@@ -51,6 +51,10 @@ contract Vault {
     string private _name;
     string private _symbol;
 
+    uint8 private _decimals;
+    uint256 private _totalSupply;
+    mapping (address => uint256) private _balances;
+
     function name() public view returns (string memory) {
         return _name;
     }
@@ -253,7 +257,21 @@ contract Vault {
     }
 
     function _issueSharesForAmount(address to, uint256 amount) internal returns (uint256) {
+        uint256 shares = 0;
+        if (_totalSupply > 0) {
+            shares = amount * _totalSupply / _freeFunds();
+        } else {
+            shares = amount;
+        }
 
+        assert(shares != 0);
+
+        _totalSupply += shares;
+        _balances[to] += shares;
+
+        emit Transfer(address(0), to, amount);
+
+        return shares;
     }
 
     function withdraw(uint256 amount) external returns (uint256) {
@@ -262,14 +280,33 @@ contract Vault {
     }
 
     function _shareValue(uint256 shares) internal view returns (uint256) {
-        
+        if (_totalSupply == 0) {
+            return 0;
+        }
+
+        return shares * _freeFunds() / _totalSupply;
     }
 
     function _sharesForAmount(uint256 shares) internal view returns (uint256) {
-        
+        uint256 freeFunds = _freeFunds();
+        if (freeFunds > 0) {
+            return amount * _totalSupply / freeFunds;
+        }
+
+        return 0;
     }
 
     function maxAvailableShares() external view returns (uint256) {
+        uint256 shares = _sharesForAmount(_balances[_self]);
+
+        for (uint i = 0; i < MAXIMUM_STRATEGIES; i++) {
+            if (strategies[i] == address(0))
+                break;
+
+            shares += _sharesForAmount(strategies[i].totalDebt);
+        }
+
+        return shares;
     }
 
     function _reportLoss(address strategy, uint256 loss) internal {
@@ -281,6 +318,7 @@ contract Vault {
     }
 
     function pricePerShare() external view returns (uint256) {
+        return _shareValue(10 ** _decimals);
     }
 
     function _organiseWithdrawalQueue() internal {
